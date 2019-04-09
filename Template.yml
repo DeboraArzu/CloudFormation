@@ -1,6 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'AWS CloudFormation Template OpsWorks: Launches OpsWorks stack, layer, instance and creates all the necessary resources 
 for a public subnet'
+Mappings:
+  Region2Principal:
+    us-east-1:
+      EC2Principal: ec2.amazonaws.com
+      OpsWorksPrincipal: opsworks.amazonaws.com
 Resources:
   MyInternetGateway:
     Type: AWS::EC2::InternetGateway
