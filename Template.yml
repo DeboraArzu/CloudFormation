@@ -1,5 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS CloudFormation Template OpsWorks: Launches OpsWorks stack'
+Description: 'AWS CloudFormation Template OpsWorks: Launches OpsWorks stack, layer, instance and creates all the necessary resources 
+for a public subnet'
 Resources:
   MyInternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -141,28 +142,34 @@ Resources:
         - OpsWorksServiceRole
         - Arn
       Tags: 
-      - 
-      Key: "Name"
-      Value: "Chef_Redis" 
+      - Key: "Name"
+        Value: "Chef_Redis" 
       UseCustomCookbooks: 'true'
       UseOpsworksSecurityGroups: 'true'
       VpcId:
         Ref: MyVpc
-  Mylayer:
+  MyApp:
+    Type: AWS::OpsWorks::App
+    Properties:
+      StackId:
+        Ref: MyStack
+      Name: RedisApp
+      Type: other
+      AppSource:
+        Type: git
+        Url: git://github.com/DeboraArzu/Chef_Redis.git
+  MyLayer:
     Type: AWS::OpsWorks::Layer
     DependsOn: MyApp
     Properties:
       StackId:
         Ref: MyStack
-      Name: Redis
+      Name: Redis_Opsworks
       Type: custom
-      Shortname: redis
+      Shortname: redis-app
       EnableAutoHealing: 'true'
       AutoAssignElasticIps: 'false'
       AutoAssignPublicIps: 'true'
-      CustomRecipes:
-        Configure:
-          - Chef_Redis::recipes
   MyInstance:
     Type: AWS::OpsWorks::Instance
     Properties:
@@ -171,6 +178,56 @@ Resources:
       LayerIds:
       - Ref: MyLayer
       InstanceType: t2.micro
+  # IAM Roles
+  OpsWorksServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - Fn::FindInMap:
+              - Region2Principal
+              - Ref: AWS::Region
+              - OpsWorksPrincipal
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: opsworks-service
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:*
+            - iam:PassRole
+            - cloudwatch:GetMetricStatistics
+            - elasticloadbalancing:*
+            Resource: "*"
+  OpsWorksInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - Fn::FindInMap:
+              - Region2Principal
+              - Ref: AWS::Region
+              - EC2Principal
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+  # Instance Profile
+  OpsWorksInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+      - Ref: OpsWorksInstanceRole
+# Outputs
 Outputs:
   StackId:
     Description: Stack Id for the newly created OpsWorks stack
