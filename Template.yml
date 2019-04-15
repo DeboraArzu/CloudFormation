@@ -19,17 +19,16 @@ Resources:
       CidrBlock: 10.0.0.0/16
       InstanceTenancy: default
       Tags:
-        - 
-           Key: Name
-           Name: OpsWorksVPC
+        - Key: Name
+          Value: OpsWorksVPC
   MyRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: 
         Ref: MyVpc
       Tags:
-      - Key: Name
-        Value: OpsWorks_publicRT
+        - Key: Name
+          Value: OpsWorks_publicRT
   #Make public Route Table
   MyrouteT1:
      Type: AWS::EC2::Route
@@ -37,7 +36,7 @@ Resources:
       RouteTableId: 
         Ref: MyRouteTable
       DestinationCidrBlock: 0.0.0.0/0
-      GateWayId: 
+      NatGatewayId: 
         Ref: MyInternetGateway
   AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -72,8 +71,8 @@ Resources:
         ToPort: '80'
         CidrIp: 0.0.0.0/0
       Tags:
-      - Key: Name
-        Value: OpsWorksSG  
+        - Key: Name
+          Value: OpsWorksSG  
   #NACL
   MyNetworkACL:
     Type: AWS::EC2::NetworkAcl
@@ -81,8 +80,8 @@ Resources:
       VpcId:
         Ref: MyVpc
       Tags:
-      - Key: Name
-        Value: MyNACL
+        - Key: Name
+          Value: MyNACL
   MyNetworkAclEntry:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
@@ -106,7 +105,7 @@ Resources:
       VpcId: 
         Ref: MyVpc
       CidrBlock: 10.0.1.0/24
-      AvailabilityZone: us-east-2a
+      AvailabilityZone: us-east-1c
       Tags:
         - Key: Name
           Value: OpsWorksPublicSubnet
@@ -117,42 +116,38 @@ Resources:
         Ref: OpsWorksPublicSubnet
       RouteTableId:
         Ref: MyRouteTable
-  # OpsWorks    
+  # OpsWorks
   MyStack:
-    Type: "AWS::OpsWorks::Stack"
-    Properties: 
-      AgentVersion: Auto-update
-      ChefConfiguration:
-        #BerkshelfVersion:
-        ManageBerkshelf: 'true'
+    Type: AWS::OpsWorks::Stack
+    Properties:
+      Name: Redis_Opsworks
+      ServiceRoleArn:
+        Fn::GetAtt:
+        - OpsWorksServiceRole
+        - Arn
+      DefaultInstanceProfileArn:
+        Fn::GetAtt:
+        - OpsWorksInstanceProfile
+        - Arn
+      AgentVersion: LATEST
       ConfigurationManager:
         Name: Chef
         Version: 12
       CustomCookbooksSource:
         Type: git
-        Url: https://github.com/DeboraArzu/Chef_Redis
-        Username: Deboraarzu
-      DefaultAvailabilityZone: us-east-1
-      DefaultInstanceProfileArn:
-        Fn::GetAtt:
-        - OpsWorksInstanceProfile
-        - Arn
-      DefaultOs: Ubuntu 16.04 LTS
+        Url: https://github.com/DeboraArzu/Chef_Redis.git
+      DefaultAvailabilityZone: us-east-1c
+      DefaultOs: Ubuntu 14.04 LTS
       #DefaultSshKeyName: String
       DefaultSubnetId:
         Ref: OpsWorksPublicSubnet
-      Name: Chef_Redis
-      ServiceRoleArn:
-        Fn::GetAtt:
-        - OpsWorksServiceRole
-        - Arn
-      Tags: 
-      - Key: "Name"
-        Value: "Chef_Redis" 
       UseCustomCookbooks: 'true'
       UseOpsworksSecurityGroups: 'true'
       VpcId:
-        Ref: MyVpc
+        Ref: MyVpc 
+      Tags:
+        - Key: "Name"
+          Name: "MyStack"
   MyApp:
     Type: AWS::OpsWorks::App
     Properties:
@@ -169,11 +164,11 @@ Resources:
     Properties:
       StackId:
         Ref: MyStack
-      Name: Redis_Opsworks
+      Name: Redis_OpsworksLayer
       Type: custom
-      Shortname: redis-app
+      Shortname: redis
       EnableAutoHealing: 'true'
-      AutoAssignElasticIps: 'false'
+      AutoAssignElasticIps: 'true'
       AutoAssignPublicIps: 'true'
   MyInstance:
     Type: AWS::OpsWorks::Instance
