@@ -135,7 +135,7 @@ Resources:
         Version: 12
       CustomCookbooksSource:
         Type: git
-        Url: https://github.com/DeboraArzu/Chef_Redis.git
+        Url: https://github.com/DeboraArzu/Opsworks_Chef.git
       DefaultAvailabilityZone: us-east-1c
       DefaultOs: Ubuntu 14.04 LTS
       #DefaultSshKeyName: String
